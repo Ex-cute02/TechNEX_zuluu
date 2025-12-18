@@ -192,7 +192,9 @@ class DiversifiedMutualFundSystem:
             print(f"✓ Model trained - RMSE: {rmse:.3f}, R²: {r2:.3f}")
             
             # Export model to pickle file
-            model_filename = f"../models/mutual_fund_model_{target}.pkl"
+            import os
+            models_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
+            model_filename = os.path.join(models_dir, f"mutual_fund_model_{target}.pkl")
             with open(model_filename, 'wb') as f:
                 pickle.dump({
                     'model': model,
