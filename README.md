@@ -1,8 +1,8 @@
-# 🚀 Mutual Fund AI System
+# Mutual Fund AI System
 
 AI-powered mutual fund recommendation system for middle-class investors.
 
-## 🎯 Features
+## Features
 
 - **AI Recommendations** with 96.4% accuracy
 - **789 Mutual Funds** from 39 AMCs analyzed
@@ -10,14 +10,14 @@ AI-powered mutual fund recommendation system for middle-class investors.
 - **Professional Web Interface** with interactive charts
 - **Complete Analysis** with correlations and insights
 
-## 🏗️ Architecture
+## Architecture
 
 - **Backend**: FastAPI with ML models
 - **Frontend**: Next.js with TypeScript
 - **Database**: CSV data with 789 funds
 - **ML Models**: Gradient Boosting & Extra Trees
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Backend
 ```bash
@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-## 📊 System Capabilities
+## System Capabilities
 
 - **Personalized Recommendations** based on AMC, category, amount, tenure
 - **Market Analysis** with comprehensive dashboards
