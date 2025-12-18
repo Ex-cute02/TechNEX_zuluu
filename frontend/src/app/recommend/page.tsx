@@ -308,44 +308,52 @@ export default function RecommendPage() {
                       </div>
                     </div>
                     <ResponsiveContainer width="100%" height={350}>
-                      <LineChart>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis 
-                          dataKey="year" 
-                          label={{ value: 'Investment Year', position: 'insideBottom', offset: -5 }}
-                        />
-                        <YAxis 
-                          label={{ value: 'Portfolio Value (₹)', angle: -90, position: 'insideLeft' }}
-                          tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
-                        />
-                        <Tooltip 
-                          formatter={(value: number) => formatCurrency(value)}
-                          labelFormatter={(label) => `Year ${label}`}
-                        />
-                        <Legend />
-                        {recommendations.recommendations.map((fund, idx) => {
-                          const initialAmount = parseFloat(fund.suggested_allocation.replace(/[₹,]/g, ''));
-                          const returnRate = parseFloat(fund.predicted_return.replace('%', '')) / 100;
-                          const years = [0, 1, 2, 3, 4, 5].filter(y => y <= parseInt(recommendations.investment_summary.investment_horizon));
-                          
-                          return (
-                            <Line
-                              key={idx}
-                              type="monotone"
-                              dataKey="value"
-                              data={years.map(year => ({
-                                year,
-                                value: initialAmount * Math.pow(1 + returnRate, year)
-                              }))}
-                              name={fund.scheme_name.length > 25 ? fund.scheme_name.substring(0, 25) + '...' : fund.scheme_name}
-                              stroke={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5]}
-                              strokeWidth={3}
-                              dot={{ r: 5, fill: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5] }}
-                              activeDot={{ r: 8 }}
+                      {(() => {
+                        const horizon = parseInt(recommendations.investment_summary.investment_horizon) || 3;
+                        const years = [0, 1, 2, 3, 4, 5].filter(y => y <= horizon);
+                        
+                        // Create merged data for all funds
+                        const mergedData = years.map((year) => {
+                          const point: any = { year };
+                          recommendations.recommendations.forEach((fund, fIdx) => {
+                            const amt = parseFloat(fund.suggested_allocation.replace(/[₹,]/g, ''));
+                            const rate = parseFloat(fund.predicted_return.replace('%', '')) / 100;
+                            point[`fund_${fIdx}`] = amt * Math.pow(1 + rate, year);
+                          });
+                          return point;
+                        });
+                        
+                        return (
+                          <LineChart data={mergedData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              dataKey="year" 
+                              label={{ value: 'Investment Year', position: 'insideBottom', offset: -5 }}
                             />
-                          );
-                        })}
-                      </LineChart>
+                            <YAxis 
+                              label={{ value: 'Portfolio Value (₹)', angle: -90, position: 'insideLeft' }}
+                              tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                            />
+                            <Tooltip 
+                              formatter={(value: number) => formatCurrency(value)}
+                              labelFormatter={(label) => `Year ${label}`}
+                            />
+                            <Legend />
+                            {recommendations.recommendations.map((fund, idx) => (
+                              <Line
+                                key={idx}
+                                type="monotone"
+                                dataKey={`fund_${idx}`}
+                                name={fund.scheme_name.length > 25 ? fund.scheme_name.substring(0, 25) + '...' : fund.scheme_name}
+                                stroke={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5]}
+                                strokeWidth={3}
+                                dot={{ r: 5, fill: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5] }}
+                                activeDot={{ r: 8 }}
+                              />
+                            ))}
+                          </LineChart>
+                        );
+                      })()}
                     </ResponsiveContainer>
                   </div>
 
