@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { TrendingUp, DollarSign, Users, Award, Activity, Cpu } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import MarketConditionIndicator from '@/components/MarketConditionIndicator';
 
 interface MarketOverview {
   total_funds: number;
@@ -115,6 +116,11 @@ export default function DashboardPage() {
           <p className={`font-mono text-xs uppercase tracking-[0.2em] mt-2 theme-transition ${
             theme === 'light' ? 'text-gray-500' : 'text-slate-500'
           }`}>Aggregate Institutional Oversight & Predictive Metrics</p>
+        </div>
+
+        {/* Market Condition Indicator */}
+        <div className="mb-8">
+          <MarketConditionIndicator />
         </div>
 
         {/* Quant Metric Cards */}

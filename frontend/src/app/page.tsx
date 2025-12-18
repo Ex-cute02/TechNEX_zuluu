@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { TrendingUp, BarChart3, Search, Users, ArrowRight, CheckCircle, ShieldCheck, Zap, Globe } from 'lucide-react';
+import MarketConditionIndicator from '@/components/MarketConditionIndicator';
 
 export default function Home() {
   return (
@@ -45,6 +46,11 @@ export default function Home() {
               Market Analytics
               <BarChart3 className="ml-2 h-5 w-5 text-slate-400" />
             </Link>
+          </div>
+
+          {/* Market Condition Indicator */}
+          <div className="max-w-2xl mx-auto mb-16">
+            <MarketConditionIndicator />
           </div>
 
           {/* Luxury Stats Bar */}

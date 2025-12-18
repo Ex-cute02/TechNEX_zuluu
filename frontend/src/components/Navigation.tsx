@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { TrendingUp, BarChart3, Search, Users, Home, Globe, Sun, Moon } from 'lucide-react';
+import { TrendingUp, BarChart3, Search, Users, Home, Globe, Sun, Moon, Clock } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const Navigation = () => {
@@ -15,6 +15,7 @@ const Navigation = () => {
     { href: '/recommend', label: 'Recommendations', icon: TrendingUp },
     { href: '/analysis', label: 'Analysis', icon: Search },
     { href: '/funds', label: 'Fund Explorer', icon: Users },
+    { href: '/what-if', label: 'What If?', icon: Clock },
   ];
 
   return (

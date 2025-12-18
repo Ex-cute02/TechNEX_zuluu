@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { 
   TrendingUp, DollarSign, Calendar, Shield, Star, 
-  Building, Zap, ArrowRight, Sparkles, ChevronRight, Globe 
+  Building, Zap, ArrowRight, Sparkles, ChevronRight, Globe, PieChart, BarChart3, Activity
 } from 'lucide-react';
+import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line, ScatterChart, Scatter, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 
 interface Recommendation {
   scheme_name: string;
@@ -16,6 +17,10 @@ interface Recommendation {
   rating: string;
   allocation_percentage: string;
   comprehensive_score: string;
+  actual_historical_return?: string;
+  expense_ratio?: string;
+  fund_size?: number;
+  fund_age?: number;
 }
 
 interface RecommendationResponse {
@@ -206,6 +211,177 @@ export default function RecommendPage() {
                   </div>
                 </div>
 
+                {/* Enhanced Graphs Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Allocation Pie Chart */}
+                  <div className="bg-white/90 backdrop-blur-sm border border-white p-8 rounded-[2.5rem] shadow-xl shadow-amber-900/5">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-3 bg-amber-50 rounded-2xl">
+                        <PieChart className="w-6 h-6 text-amber-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-950 tracking-tight">Portfolio Allocation</h3>
+                        <p className="text-xs text-slate-500 uppercase tracking-widest">Distribution Breakdown</p>
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={recommendations.recommendations.map((fund, idx) => ({
+                            name: fund.scheme_name.length > 20 ? fund.scheme_name.substring(0, 20) + '...' : fund.scheme_name,
+                            value: parseFloat(fund.allocation_percentage.replace('%', '')),
+                            fill: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5]
+                          }))}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                          outerRadius={100}
+                          innerRadius={40}
+                          dataKey="value"
+                        >
+                          {recommendations.recommendations.map((_, idx) => (
+                            <Cell key={`cell-${idx}`} fill={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Risk-Return Scatter Chart */}
+                  <div className="bg-white/90 backdrop-blur-sm border border-white p-8 rounded-[2.5rem] shadow-xl shadow-amber-900/5">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-3 bg-blue-50 rounded-2xl">
+                        <Activity className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-950 tracking-tight">Risk-Return Matrix</h3>
+                        <p className="text-xs text-slate-500 uppercase tracking-widest">Performance vs Risk</p>
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <ScatterChart>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis 
+                          type="number" 
+                          dataKey="risk" 
+                          name="Risk Level" 
+                          domain={[0, 7]}
+                          label={{ value: 'Risk Level', position: 'insideBottom', offset: -5 }}
+                        />
+                        <YAxis 
+                          type="number" 
+                          dataKey="return" 
+                          name="Predicted Return %"
+                          label={{ value: 'Return %', angle: -90, position: 'insideLeft' }}
+                        />
+                        <Tooltip 
+                          cursor={{ strokeDasharray: '3 3' }}
+                          formatter={(value: number, name: string) => [
+                            name === 'return' ? `${value.toFixed(2)}%` : value.toFixed(1),
+                            name === 'return' ? 'Predicted Return' : 'Risk Level'
+                          ]}
+                        />
+                        <Scatter 
+                          name="Funds" 
+                          data={recommendations.recommendations.map(fund => ({
+                            risk: parseFloat(fund.risk_level.split('/')[0]),
+                            return: parseFloat(fund.predicted_return.replace('%', '')),
+                            name: fund.scheme_name
+                          }))} 
+                          fill="#f59e0b"
+                        />
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Projected Growth Line Chart */}
+                  <div className="bg-white/90 backdrop-blur-sm border border-white p-8 rounded-[2.5rem] shadow-xl shadow-amber-900/5 lg:col-span-2">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-3 bg-green-50 rounded-2xl">
+                        <TrendingUp className="w-6 h-6 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-950 tracking-tight">Projected Growth Trajectory</h3>
+                        <p className="text-xs text-slate-500 uppercase tracking-widest">Multi-Year Performance Forecast</p>
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <LineChart>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis 
+                          dataKey="year" 
+                          label={{ value: 'Investment Year', position: 'insideBottom', offset: -5 }}
+                        />
+                        <YAxis 
+                          label={{ value: 'Portfolio Value (₹)', angle: -90, position: 'insideLeft' }}
+                          tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
+                        />
+                        <Tooltip 
+                          formatter={(value: number) => formatCurrency(value)}
+                          labelFormatter={(label) => `Year ${label}`}
+                        />
+                        <Legend />
+                        {recommendations.recommendations.map((fund, idx) => {
+                          const initialAmount = parseFloat(fund.suggested_allocation.replace(/[₹,]/g, ''));
+                          const returnRate = parseFloat(fund.predicted_return.replace('%', '')) / 100;
+                          const years = [0, 1, 2, 3, 4, 5].filter(y => y <= parseInt(recommendations.investment_summary.investment_horizon));
+                          
+                          return (
+                            <Line
+                              key={idx}
+                              type="monotone"
+                              dataKey="value"
+                              data={years.map(year => ({
+                                year,
+                                value: initialAmount * Math.pow(1 + returnRate, year)
+                              }))}
+                              name={fund.scheme_name.length > 25 ? fund.scheme_name.substring(0, 25) + '...' : fund.scheme_name}
+                              stroke={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5]}
+                              strokeWidth={3}
+                              dot={{ r: 5, fill: ['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5] }}
+                              activeDot={{ r: 8 }}
+                            />
+                          );
+                        })}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Performance Comparison Bar Chart */}
+                  <div className="bg-white/90 backdrop-blur-sm border border-white p-8 rounded-[2.5rem] shadow-xl shadow-amber-900/5 lg:col-span-2">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-3 bg-purple-50 rounded-2xl">
+                        <BarChart3 className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-slate-950 tracking-tight">Comprehensive Performance Metrics</h3>
+                        <p className="text-xs text-slate-500 uppercase tracking-widest">Multi-Dimensional Analysis</p>
+                      </div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={350}>
+                      <BarChart data={recommendations.recommendations.map(fund => ({
+                        name: fund.scheme_name.length > 15 ? fund.scheme_name.substring(0, 15) + '...' : fund.scheme_name,
+                        predictedReturn: parseFloat(fund.predicted_return.replace('%', '')),
+                        historicalReturn: fund.actual_historical_return ? parseFloat(fund.actual_historical_return.replace('%', '')) : 0,
+                        score: parseFloat(fund.comprehensive_score) * 100,
+                        rating: parseFloat(fund.rating.split('/')[0]) * 20
+                      }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="predictedReturn" fill="#f59e0b" name="Predicted Return %" />
+                        <Bar dataKey="historicalReturn" fill="#10b981" name="Historical Return %" />
+                        <Bar dataKey="score" fill="#8b5cf6" name="Quant Score (×100)" />
+                        <Bar dataKey="rating" fill="#fbbf24" name="Rating Score" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
                 {/* Fund Cards */}
                 <div className="space-y-6">
                   {recommendations.recommendations.map((fund, index) => (
@@ -231,18 +407,76 @@ export default function RecommendPage() {
                         </div>
                       </div>
 
-                      {/* Stat Grid with Increased Font Sizes */}
+                      {/* Enhanced Stat Grid with Visual Indicators */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-slate-200/50 rounded-3xl overflow-hidden border border-slate-100">
-                        <StatBlock label="Allocation" value={fund.suggested_allocation} icon={<DollarSign className="w-4 h-4"/>} />
-                        <StatBlock label="Rating" value={`★ ${fund.rating}`} icon={<Star className="w-4 h-4"/>} />
-                        <StatBlock label="Share" value={fund.allocation_percentage} icon={<TrendingUp className="w-4 h-4"/>} />
-                        <StatBlock 
+                        <EnhancedStatBlock 
+                          label="Allocation" 
+                          value={fund.suggested_allocation} 
+                          icon={<DollarSign className="w-5 h-5"/>}
+                          trend={parseFloat(fund.allocation_percentage.replace('%', ''))}
+                          color="amber"
+                        />
+                        <EnhancedStatBlock 
+                          label="Rating" 
+                          value={`★ ${fund.rating}`} 
+                          icon={<Star className="w-5 h-5"/>}
+                          trend={parseFloat(fund.rating.split('/')[0])}
+                          color="yellow"
+                          maxValue={5}
+                        />
+                        <EnhancedStatBlock 
+                          label="Share" 
+                          value={fund.allocation_percentage} 
+                          icon={<TrendingUp className="w-5 h-5"/>}
+                          trend={parseFloat(fund.allocation_percentage.replace('%', ''))}
+                          color="green"
+                        />
+                        <EnhancedStatBlock 
                           label="Quant Score" 
                           value={fund.comprehensive_score} 
-                          icon={<Zap className="w-4 h-4"/>} 
-                          highlight 
+                          icon={<Zap className="w-5 h-5"/>}
+                          trend={parseFloat(fund.comprehensive_score) * 100}
+                          color="purple"
+                          highlight
                         />
                       </div>
+                      
+                      {/* Additional Metrics Row */}
+                      {fund.actual_historical_return && (
+                        <div className="mt-6 pt-6 border-t border-slate-200 grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-50 rounded-xl">
+                              <Calendar className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Historical</div>
+                              <div className="text-lg font-black text-slate-950">{fund.actual_historical_return}</div>
+                            </div>
+                          </div>
+                          {fund.expense_ratio && (
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-red-50 rounded-xl">
+                                <Shield className="w-4 h-4 text-red-600" />
+                              </div>
+                              <div>
+                                <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Expense</div>
+                                <div className="text-lg font-black text-slate-950">{fund.expense_ratio}</div>
+                              </div>
+                            </div>
+                          )}
+                          {fund.fund_size && (
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-indigo-50 rounded-xl">
+                                <Building className="w-4 h-4 text-indigo-600" />
+                              </div>
+                              <div>
+                                <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">AUM</div>
+                                <div className="text-lg font-black text-slate-950">₹{(fund.fund_size / 1000000).toFixed(1)}M</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -282,21 +516,67 @@ export default function RecommendPage() {
 }
 
 /**
- * Reusable Stat Component with increased font sizes for Score values
+ * Enhanced Stat Component with visual progress indicators
  */
-function StatBlock({ label, value, icon, highlight = false }: { label: string, value: string, icon: React.ReactNode, highlight?: boolean }) {
+function EnhancedStatBlock({ 
+  label, 
+  value, 
+  icon, 
+  trend, 
+  color = "amber",
+  maxValue = 100,
+  highlight = false 
+}: { 
+  label: string, 
+  value: string, 
+  icon: React.ReactNode, 
+  trend: number,
+  color?: "amber" | "yellow" | "green" | "purple" | "blue",
+  maxValue?: number,
+  highlight?: boolean 
+}) {
+  const colorClasses = {
+    amber: { bg: "bg-amber-50", icon: "text-amber-600", bar: "bg-amber-500", text: "text-amber-600" },
+    yellow: { bg: "bg-yellow-50", icon: "text-yellow-600", bar: "bg-yellow-500", text: "text-yellow-600" },
+    green: { bg: "bg-green-50", icon: "text-green-600", bar: "bg-green-500", text: "text-green-600" },
+    purple: { bg: "bg-purple-50", icon: "text-purple-600", bar: "bg-purple-500", text: "text-purple-600" },
+    blue: { bg: "bg-blue-50", icon: "text-blue-600", bar: "bg-blue-500", text: "text-blue-600" },
+  };
+  
+  const colors = colorClasses[color];
+  const percentage = Math.min((trend / maxValue) * 100, 100);
+  
   return (
-    <div className="bg-white p-6 group-hover:bg-slate-50 transition-colors flex flex-col justify-center">
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className={`${highlight ? 'text-amber-600' : 'text-slate-400'}`}>{icon}</span>
-        <span className="text-[10px] uppercase tracking-[0.15em] font-black text-slate-400">{label}</span>
-      </div>
-      <div className={`tracking-tighter font-black ${
-        highlight 
-          ? 'text-amber-600 text-3xl italic font-mono' 
-          : 'text-slate-950 text-xl'
-      }`}>
-        {value}
+    <div className="bg-white p-6 group-hover:bg-slate-50 transition-all duration-300 flex flex-col justify-between relative overflow-hidden">
+      {/* Animated background gradient */}
+      <div className={`absolute inset-0 opacity-5 ${colors.bg} transition-opacity group-hover:opacity-10`} />
+      
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`${colors.icon} transition-transform group-hover:scale-110`}>{icon}</span>
+          <span className="text-[10px] uppercase tracking-[0.15em] font-black text-slate-400">{label}</span>
+        </div>
+        
+        <div className={`tracking-tighter font-black mb-3 transition-all ${
+          highlight 
+            ? `${colors.text} text-3xl italic font-mono` 
+            : 'text-slate-950 text-2xl'
+        }`}>
+          {value}
+        </div>
+        
+        {/* Progress Bar */}
+        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div 
+            className={`h-full ${colors.bar} transition-all duration-1000 ease-out rounded-full`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        
+        {/* Trend indicator */}
+        <div className="mt-2 text-[9px] uppercase tracking-widest text-slate-400 font-bold">
+          {percentage.toFixed(0)}% of max
+        </div>
       </div>
     </div>
   );

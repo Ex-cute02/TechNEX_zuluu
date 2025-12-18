@@ -118,6 +118,45 @@ class ApiClient {
 
     return this.request(`/api/top-performers?${params}`);
   }
+
+  async getMarketCondition() {
+    return this.request<{
+      ticker: string;
+      current_price: number;
+      ema_12: number;
+      ema_21: number;
+      ema_diff_percent: number;
+      condition: 'bullish' | 'bearish';
+      recommendation: 'favorable' | 'caution';
+      message: string;
+      crossover: 'bullish' | 'bearish' | null;
+      trend_strength: 'weak' | 'moderate' | 'strong';
+      last_updated: string;
+      timeframe: string;
+      data_points: number;
+      period: string;
+      estimated_improvement_time?: {
+        days: number | null;
+        hours: number | null;
+        total_hours: number | null;
+        message?: string;
+      };
+      estimated_improvement_date?: string;
+      improvement_confidence?: 'high' | 'medium' | 'low';
+    }>('/api/market-condition');
+  }
+
+  async whatIfSimulation(params: {
+    fund_names: string[];
+    investment_amount: number;
+    duration_years: number;
+    market_regime?: string;
+  }) {
+    return this.request('/api/what-if-simulation', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
 }
 
 export const api = new ApiClient();

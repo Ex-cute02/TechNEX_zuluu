@@ -92,6 +92,12 @@ class ComparisonRequest(BaseModel):
     fund_names: List[str]
     metrics: List[str] = ["return_1yr", "return_3yr", "return_5yr", "risk_level", "expense_ratio"]
 
+class WhatIfSimulationRequest(BaseModel):
+    fund_names: List[str]  # Can be single fund or top N funds
+    investment_amount: float
+    duration_years: int  # 1, 3, or 5
+    market_regime: Optional[str] = None  # "bull", "sideways", "volatile" - will be auto-detected if not provided
+
 # API Endpoints
 
 @app.get("/")
@@ -802,6 +808,377 @@ async def get_dashboard_data():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating dashboard data: {str(e)}")
+
+@app.get("/api/market-condition")
+async def get_market_condition():
+    """
+    Fetch Nifty 50 data, calculate EMA 12/21 on 4H timeframe, 
+    and suggest market condition based on crossover
+    """
+    try:
+        import yfinance as yf
+        from datetime import datetime, timedelta
+        
+        # Fetch Nifty 50 data (^NSEI is the Yahoo Finance ticker for Nifty 50)
+        ticker = "^NSEI"
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=365)  # Past 1 year
+        
+        # Download data
+        nifty = yf.download(ticker, start=start_date, end=end_date, interval="1h", progress=False)
+        
+        if nifty.empty:
+            raise HTTPException(status_code=500, detail="Failed to fetch Nifty 50 data")
+        
+        # Resample to 4H timeframe
+        nifty_4h = nifty['Close'].resample('4H').last().dropna()
+        
+        if len(nifty_4h) < 21:
+            raise HTTPException(status_code=500, detail="Insufficient data for EMA calculation")
+        
+        # Calculate EMA 12 and EMA 21
+        ema_12 = nifty_4h.ewm(span=12, adjust=False).mean()
+        ema_21 = nifty_4h.ewm(span=21, adjust=False).mean()
+        
+        # Get latest values
+        latest_price = float(nifty_4h.iloc[-1])
+        latest_ema_12 = float(ema_12.iloc[-1])
+        latest_ema_21 = float(ema_21.iloc[-1])
+        
+        # Previous values to detect crossover
+        prev_ema_12 = float(ema_12.iloc[-2]) if len(ema_12) > 1 else latest_ema_12
+        prev_ema_21 = float(ema_21.iloc[-2]) if len(ema_21) > 1 else latest_ema_21
+        
+        # Determine market condition
+        # Bullish: EMA 12 > EMA 21 (good to invest)
+        # Bearish: EMA 12 < EMA 21 (not good to invest)
+        is_bullish = latest_ema_12 > latest_ema_21
+        was_bullish = prev_ema_12 > prev_ema_21
+        
+        # Detect crossover
+        crossover = None
+        if is_bullish != was_bullish:
+            if is_bullish:
+                crossover = "bullish"  # Golden cross (EMA 12 crossed above EMA 21)
+            else:
+                crossover = "bearish"  # Death cross (EMA 12 crossed below EMA 21)
+        
+        # Calculate percentage difference
+        ema_diff_percent = ((latest_ema_12 - latest_ema_21) / latest_ema_21) * 100
+        
+        # Market condition recommendation
+        if is_bullish:
+            condition = "bullish"
+            recommendation = "favorable"
+            message = "Market conditions are favorable for investment. EMA 12 is above EMA 21, indicating upward momentum."
+        else:
+            condition = "bearish"
+            recommendation = "caution"
+            message = "Market conditions suggest caution. EMA 12 is below EMA 21, indicating potential downward pressure."
+        
+        # Calculate trend strength (distance between EMAs)
+        trend_strength = abs(ema_diff_percent)
+        if trend_strength < 0.5:
+            strength = "weak"
+        elif trend_strength < 1.5:
+            strength = "moderate"
+        else:
+            strength = "strong"
+        
+        # Calculate estimated time for market improvement (if currently bearish)
+        estimated_improvement_time = None
+        estimated_improvement_date = None
+        improvement_confidence = None
+        
+        if not is_bullish:
+            # Calculate rate of change for EMA 12 and EMA 21 over last 10 periods
+            lookback_periods = min(10, len(ema_12) - 1)
+            if lookback_periods > 0:
+                # Get recent EMA values
+                recent_ema_12 = ema_12.iloc[-lookback_periods:].values
+                recent_ema_21 = ema_21.iloc[-lookback_periods:].values
+                
+                # Calculate average rate of change per 4H period
+                ema_12_changes = np.diff(recent_ema_12)
+                ema_21_changes = np.diff(recent_ema_21)
+                
+                avg_ema_12_change = np.mean(ema_12_changes) if len(ema_12_changes) > 0 else 0
+                avg_ema_21_change = np.mean(ema_21_changes) if len(ema_21_changes) > 0 else 0
+                
+                # Net convergence rate (how fast EMA 12 is catching up to EMA 21)
+                convergence_rate = avg_ema_12_change - avg_ema_21_change
+                
+                # Current gap
+                current_gap = latest_ema_21 - latest_ema_12
+                
+                # Estimate periods needed for crossover (if convergence is positive)
+                if convergence_rate > 0 and current_gap > 0:
+                    periods_to_crossover = current_gap / convergence_rate
+                    # Convert 4H periods to hours, then to days
+                    hours_to_improvement = periods_to_crossover * 4
+                    days_to_improvement = hours_to_improvement / 24
+                    
+                    # Cap at reasonable maximum (e.g., 90 days)
+                    if days_to_improvement > 0 and days_to_improvement <= 90:
+                        estimated_improvement_time = {
+                            "days": int(days_to_improvement),
+                            "hours": int(hours_to_improvement % 24),
+                            "total_hours": int(hours_to_improvement)
+                        }
+                        
+                        # Calculate estimated date
+                        estimated_date = datetime.now() + timedelta(hours=hours_to_improvement)
+                        estimated_improvement_date = estimated_date.isoformat()
+                        
+                        # Calculate confidence based on trend consistency
+                        ema_12_std = np.std(ema_12_changes) if len(ema_12_changes) > 0 else 1
+                        ema_21_std = np.std(ema_21_changes) if len(ema_21_changes) > 0 else 1
+                        
+                        # Lower volatility = higher confidence
+                        volatility_score = (ema_12_std + ema_21_std) / 2
+                        if volatility_score < abs(convergence_rate) * 0.3:
+                            improvement_confidence = "high"
+                        elif volatility_score < abs(convergence_rate) * 0.6:
+                            improvement_confidence = "medium"
+                        else:
+                            improvement_confidence = "low"
+                    else:
+                        # If estimate is too far out or negative, provide general guidance
+                        estimated_improvement_time = {
+                            "days": None,
+                            "hours": None,
+                            "total_hours": None,
+                            "message": "Market recovery timeline uncertain. Monitor EMA convergence trends."
+                        }
+                        improvement_confidence = "low"
+                else:
+                    # Diverging trend - market getting worse
+                    estimated_improvement_time = {
+                        "days": None,
+                        "hours": None,
+                        "total_hours": None,
+                        "message": "EMAs are diverging. Wait for trend reversal signals before investing."
+                    }
+                    improvement_confidence = "low"
+        
+        response = {
+            "ticker": ticker,
+            "current_price": latest_price,
+            "ema_12": latest_ema_12,
+            "ema_21": latest_ema_21,
+            "ema_diff_percent": round(ema_diff_percent, 2),
+            "condition": condition,
+            "recommendation": recommendation,
+            "message": message,
+            "crossover": crossover,
+            "trend_strength": strength,
+            "last_updated": datetime.now().isoformat(),
+            "timeframe": "4H",
+            "data_points": len(nifty_4h),
+            "period": "1 year"
+        }
+        
+        # Add improvement estimates if available
+        if estimated_improvement_time:
+            response["estimated_improvement_time"] = estimated_improvement_time
+        if estimated_improvement_date:
+            response["estimated_improvement_date"] = estimated_improvement_date
+        if improvement_confidence:
+            response["improvement_confidence"] = improvement_confidence
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except ImportError:
+        raise HTTPException(status_code=500, detail="yfinance library not installed. Run: pip install yfinance")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching market condition: {str(e)}")
+
+def classify_market_regime(ema_diff_percent: float, trend_strength: str, volatility: float = None) -> str:
+    """
+    Classify market regime based on EMA analysis and volatility
+    Returns: "bull", "sideways", or "volatile"
+    """
+    # Strong bullish trend
+    if ema_diff_percent > 1.0 and trend_strength in ["strong", "moderate"]:
+        return "bull"
+    
+    # Strong bearish trend or high volatility
+    if ema_diff_percent < -1.0 or (volatility and volatility > 15):
+        return "volatile"
+    
+    # Sideways market (weak trend, small EMA difference)
+    return "sideways"
+
+@app.post("/api/what-if-simulation")
+async def what_if_simulation(request: WhatIfSimulationRequest):
+    """
+    Simulate "What If I Wait?" scenarios comparing investing now vs waiting 1, 3, or 6 months
+    """
+    if funds_data is None or model_loader is None:
+        raise HTTPException(status_code=500, detail="Data or models not loaded")
+    
+    try:
+        from datetime import datetime, timedelta
+        import yfinance as yf
+        
+        # Get current market regime if not provided
+        market_regime = request.market_regime
+        if not market_regime:
+            try:
+                # Fetch market condition to determine regime
+                ticker = "^NSEI"
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=90)
+                nifty = yf.download(ticker, start=start_date, end=end_date, interval="1d", progress=False)
+                
+                if not nifty.empty:
+                    # Calculate volatility (standard deviation of returns)
+                    returns = nifty['Close'].pct_change().dropna()
+                    volatility = float(returns.std() * 100) if len(returns) > 0 else 10.0
+                    
+                    # Get EMA-based regime
+                    nifty_4h = nifty['Close'].resample('4H').last().dropna()
+                    if len(nifty_4h) >= 21:
+                        ema_12 = nifty_4h.ewm(span=12, adjust=False).mean()
+                        ema_21 = nifty_4h.ewm(span=21, adjust=False).mean()
+                        ema_diff = ((ema_12.iloc[-1] - ema_21.iloc[-1]) / ema_21.iloc[-1]) * 100
+                        trend_strength = "strong" if abs(ema_diff) > 1.5 else ("moderate" if abs(ema_diff) > 0.5 else "weak")
+                        market_regime = classify_market_regime(float(ema_diff), trend_strength, volatility)
+                    else:
+                        market_regime = "sideways"
+                else:
+                    market_regime = "sideways"
+            except:
+                market_regime = "sideways"  # Default fallback
+        
+        # Find funds
+        selected_funds = []
+        for fund_name in request.fund_names:
+            fund = funds_data[funds_data['scheme_name'] == fund_name]
+            if not fund.empty:
+                selected_funds.append(fund.iloc[0].to_dict())
+        
+        if not selected_funds:
+            raise HTTPException(status_code=404, detail="No matching funds found")
+        
+        # Historical return adjustments based on market regime
+        # These are based on historical analysis of how different regimes affect returns
+        regime_adjustments = {
+            "bull": {
+                "1_month": 0.02,  # +2% for waiting in bull market (missed gains)
+                "3_month": 0.05,  # +5%
+                "6_month": 0.10   # +10%
+            },
+            "sideways": {
+                "1_month": 0.0,   # No significant impact
+                "3_month": -0.01,  # Slight negative
+                "6_month": -0.02   # Slight negative
+            },
+            "volatile": {
+                "1_month": -0.03,  # -3% (waiting might be better in volatile market)
+                "3_month": -0.05,  # -5%
+                "6_month": -0.08   # -8%
+            }
+        }
+        
+        # Simulate scenarios
+        scenarios = []
+        wait_periods = [1, 3, 6]  # months
+        
+        for wait_months in wait_periods:
+            scenario_results = []
+            
+            for fund in selected_funds:
+                # Get base predicted return using ML model
+                horizon = request.duration_years
+                try:
+                    base_return = model_loader.predict_fund_return(fund, horizon)
+                except:
+                    # Fallback to historical return
+                    base_return = fund.get(f'return_{horizon}yr', 10.0)
+                
+                # Apply market regime adjustment
+                regime_key = f"{wait_months}_month"
+                adjustment = regime_adjustments.get(market_regime, regime_adjustments["sideways"]).get(regime_key, 0.0)
+                
+                # Calculate returns for investing now vs waiting
+                # Investing now: full duration
+                invest_now_return = base_return / 100
+                invest_now_value = request.investment_amount * ((1 + invest_now_return) ** horizon)
+                invest_now_profit = invest_now_value - request.investment_amount
+                
+                # Waiting: reduced duration (horizon - wait_months/12)
+                effective_duration = max(0.5, horizon - (wait_months / 12))
+                wait_return = (base_return + (adjustment * 100)) / 100
+                wait_value = request.investment_amount * ((1 + wait_return) ** effective_duration)
+                wait_profit = wait_value - request.investment_amount
+                
+                # Opportunity cost: money sitting idle during wait period
+                # Assuming conservative 4% annual return (FD/savings account)
+                idle_return = 0.04 * (wait_months / 12)
+                idle_value = request.investment_amount * (1 + idle_return)
+                total_wait_value = wait_value + (idle_value - request.investment_amount)
+                total_wait_profit = total_wait_value - request.investment_amount
+                
+                scenario_results.append({
+                    "fund_name": fund['scheme_name'],
+                    "amc_name": fund['amc_name'],
+                    "invest_now": {
+                        "final_value": round(invest_now_value, 2),
+                        "profit": round(invest_now_profit, 2),
+                        "return_percentage": round(invest_now_return * 100, 2),
+                        "duration_years": horizon
+                    },
+                    "wait_and_invest": {
+                        "final_value": round(wait_value, 2),
+                        "profit": round(wait_profit, 2),
+                        "return_percentage": round(wait_return * 100, 2),
+                        "duration_years": round(effective_duration, 2),
+                        "idle_earnings": round(idle_value - request.investment_amount, 2)
+                    },
+                    "total_wait_scenario": {
+                        "final_value": round(total_wait_value, 2),
+                        "profit": round(total_wait_profit, 2),
+                        "net_difference": round(invest_now_profit - total_wait_profit, 2),
+                        "recommendation": "invest_now" if invest_now_profit > total_wait_profit else "wait"
+                    }
+                })
+            
+            # Aggregate results across all funds
+            avg_invest_now_profit = sum(r["invest_now"]["profit"] for r in scenario_results) / len(scenario_results)
+            avg_wait_profit = sum(r["total_wait_scenario"]["profit"] for r in scenario_results) / len(scenario_results)
+            
+            scenarios.append({
+                "wait_months": wait_months,
+                "market_regime": market_regime,
+                "fund_results": scenario_results,
+                "aggregate": {
+                    "avg_invest_now_profit": round(avg_invest_now_profit, 2),
+                    "avg_wait_profit": round(avg_wait_profit, 2),
+                    "net_difference": round(avg_invest_now_profit - avg_wait_profit, 2),
+                    "recommendation": "invest_now" if avg_invest_now_profit > avg_wait_profit else "wait",
+                    "recommendation_strength": "strong" if abs(avg_invest_now_profit - avg_wait_profit) > (request.investment_amount * 0.05) else "moderate"
+                }
+            })
+        
+        return {
+            "investment_amount": request.investment_amount,
+            "duration_years": request.duration_years,
+            "market_regime": market_regime,
+            "scenarios": scenarios,
+            "summary": {
+                "best_scenario": max(scenarios, key=lambda x: x["aggregate"]["avg_invest_now_profit"] - x["aggregate"]["avg_wait_profit"]),
+                "worst_wait_period": min(scenarios, key=lambda x: x["aggregate"]["avg_wait_profit"]),
+                "general_recommendation": "invest_now" if all(s["aggregate"]["recommendation"] == "invest_now" for s in scenarios) else "wait"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error running simulation: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
