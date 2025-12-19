@@ -1,0 +1,14 @@
+{
+  "name": "mutual-fund-api",
+  "location": "East US",
+  "sku": "F1",
+  "runtime": "PYTHON|3.11",
+  "startup_file": "run.py",
+  "app_settings": {
+    "HOST": "0.0.0.0",
+    "PORT": "8000",
+    "RELOAD": "false",
+    "SCM_DO_BUILD_DURING_DEPLOYMENT": "true",
+    "ENABLE_ORYX_BUILD": "true"
+  }
+}

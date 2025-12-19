@@ -1,0 +1,34 @@
+# Azure Container Instances deployment
+apiVersion: 2019-12-01
+location: eastus
+name: mutual-fund-api
+properties:
+  containers:
+  - name: mutual-fund-api
+    properties:
+      image: mutual-fund-api:latest
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGb: 2.0
+      ports:
+      - port: 8000
+        protocol: TCP
+      environmentVariables:
+      - name: HOST
+        value: '0.0.0.0'
+      - name: PORT
+        value: '8000'
+      - name: RELOAD
+        value: 'false'
+  osType: Linux
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: TCP
+      port: 8000
+    dnsNameLabel: mutual-fund-api-demo
+  restartPolicy: Always
+tags:
+  project: mutual-fund-ai
+  environment: production
