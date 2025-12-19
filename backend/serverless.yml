@@ -1,0 +1,86 @@
+service: mutual-fund-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  stage: prod
+  timeout: 30
+  memorySize: 1024
+  environment:
+    STAGE: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "*"
+
+functions:
+  api:
+    handler: lambda_handler.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: 
+              - https://frontend-zeta-ten-86.vercel.app
+              - https://*.vercel.app
+              - http://localhost:3000
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+      - http:
+          path: /
+          method: ANY
+          cors:
+            origin: 
+              - https://frontend-zeta-ten-86.vercel.app
+              - https://*.vercel.app
+              - http://localhost:3000
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: true
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: true
+    zip: true
+    slim: true
+    strip: false
+    noDeps: false
+    fileName: requirements.txt
+
+package:
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!.vscode/**'
+    - '!__pycache__/**'
+    - '!*.pyc'
+    - '!tests/**'
+    - 'app/**'
+    - 'models/**'
+    - 'data/**'
+    - 'lambda_handler.py'
+    - 'requirements.txt'
