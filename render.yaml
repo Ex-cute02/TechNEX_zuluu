@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: mutual-fund-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && python run.py
+    plan: free
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
+      - key: RELOAD
+        value: false
+    healthCheckPath: /
+
+  - type: web
+    name: mutual-fund-frontend
+    runtime: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm start
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://mutual-fund-backend.onrender.com
