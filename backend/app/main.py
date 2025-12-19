@@ -20,43 +20,7 @@ import base64
 import io
 warnings.filterwarnings('ignore')
 
-def create_demo_models_and_data():
-    """Create dummy models and data for demo purposes"""
-    import pickle
-    from sklearn.ensemble import RandomForestRegressor
-    
-    # Create models directory
-    os.makedirs("models", exist_ok=True)
-    os.makedirs("data", exist_ok=True)
-    
-    # Create dummy models
-    for period in ["1yr", "3yr", "5yr"]:
-        model = RandomForestRegressor(n_estimators=10, random_state=42)
-        # Fit with dummy data
-        X_dummy = np.random.rand(100, 10)
-        y_dummy = np.random.rand(100) * 20  # Returns between 0-20%
-        model.fit(X_dummy, y_dummy)
-        
-        model_path = f"models/mutual_fund_model_return_{period}.pkl"
-        with open(model_path, 'wb') as f:
-            pickle.dump(model, f)
-        print(f"✅ Created dummy model: {model_path}")
-    
-    # Create dummy data
-    dummy_data = {
-        'scheme_name': [f'Fund {i}' for i in range(100)],
-        'amc_name': [f'AMC {i//10}' for i in range(100)],
-        'category': ['Equity', 'Debt', 'Hybrid'] * 34,
-        'return_1yr': np.random.rand(100) * 20,
-        'return_3yr': np.random.rand(100) * 15,
-        'return_5yr': np.random.rand(100) * 12,
-        'expense_ratio': np.random.rand(100) * 2,
-        'aum': np.random.rand(100) * 1000
-    }
-    
-    df = pd.DataFrame(dummy_data)
-    df.to_csv('data/mutual_funds_cleaned.csv', index=False)
-    print("✅ Created dummy data: data/mutual_funds_cleaned.csv")
+
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -87,10 +51,6 @@ funds_data = None
 @app.on_event("startup")
 async def startup_event():
     """Initialize ML models and load data on startup"""
-    # Create demo models if they don't exist (for cloud deployment)
-    if not os.path.exists("models") or not os.listdir("models"):
-        print("🔄 Models not found, creating demo models...")
-        create_demo_models_and_data()
     global ml_system, model_loader, funds_data
     
     try:
