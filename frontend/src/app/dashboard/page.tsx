@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, DollarSign, Users, Award, Activity, Cpu } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import MarketConditionIndicator from '@/components/MarketConditionIndicator';
+import PerformancePieChart from '@/components/ui/performance-pie-chart';
 
 interface MarketOverview {
   total_funds: number;
@@ -43,8 +44,6 @@ interface DashboardData {
 interface MarketTrends {
   performance_distribution: PerformanceDistribution;
 }
-
-const AMBER_PALETTE = ['#fbbf24', '#f59e0b', '#d97706', '#b45309', '#78350f'];
 
 export default function DashboardPage() {
   const { theme } = useTheme();
@@ -89,13 +88,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const performanceData = [
-    { name: 'EXC', value: marketTrends?.performance_distribution.excellent },
-    { name: 'GOOD', value: marketTrends?.performance_distribution.good },
-    { name: 'AVG', value: marketTrends?.performance_distribution.average },
-    { name: 'BELOW', value: marketTrends?.performance_distribution.below_average },
-  ];
 
   return (
     <div className={`min-h-screen py-12 px-6 font-sans theme-transition ${
@@ -158,34 +150,13 @@ export default function DashboardPage() {
 
         {/* Chart Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Performance Pie */}
-          <div className={`border p-8 theme-transition ${
-            theme === 'light' 
-              ? 'bg-white border-gray-200' 
-              : 'bg-slate-900/40 border-slate-800'
-          }`}>
-            <h3 className={`text-xs font-mono font-black uppercase tracking-widest mb-8 border-b pb-4 theme-transition ${
-              theme === 'light' 
-                ? 'text-gray-600 border-gray-200' 
-                : 'text-slate-400 border-slate-800'
-            }`}>Performance Stratification</h3>
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={performanceData} innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
-                  {performanceData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={AMBER_PALETTE[index % AMBER_PALETTE.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ 
-                  backgroundColor: theme === 'light' ? '#ffffff' : '#020617', 
-                  border: theme === 'light' ? '1px solid #e5e7eb' : '1px solid #1e293b', 
-                  fontSize: '12px', 
-                  fontFamily: 'monospace',
-                  color: theme === 'light' ? '#374151' : '#fbbf24'
-                }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          {/* Performance Pie Chart */}
+          {marketTrends?.performance_distribution && (
+            <PerformancePieChart 
+              data={marketTrends.performance_distribution} 
+              theme={theme}
+            />
+          )}
 
           {/* Line Chart Returns */}
           <div className={`border p-8 theme-transition ${
