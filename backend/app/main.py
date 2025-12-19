@@ -48,6 +48,12 @@ funds_data = None
 @app.on_event("startup")
 async def startup_event():
     """Initialize ML models and load data on startup"""
+    # Create demo models if they don't exist (for cloud deployment)
+    if not os.path.exists("models") or not os.listdir("models"):
+        print("🔄 Models not found, creating demo models...")
+        from download_models import create_dummy_models, create_dummy_data
+        create_dummy_models()
+        create_dummy_data()
     global ml_system, model_loader, funds_data
     
     try:
