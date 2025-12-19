@@ -235,7 +235,7 @@ export default function RecommendPage() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                          label={({ name, percent }: { name?: string; percent?: number }) => `${name || ''}: ${percent ? (percent * 100).toFixed(1) : '0'}%`}
                           outerRadius={100}
                           innerRadius={40}
                           dataKey="value"
@@ -244,7 +244,7 @@ export default function RecommendPage() {
                             <Cell key={`cell-${idx}`} fill={['#f59e0b', '#fbbf24', '#fcd34d', '#fde68a', '#fef3c7'][idx % 5]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                        <Tooltip formatter={(value: number | undefined) => value ? `${value.toFixed(1)}%` : '0%'} />
                       </RechartsPieChart>
                     </ResponsiveContainer>
                   </div>
@@ -278,9 +278,9 @@ export default function RecommendPage() {
                         />
                         <Tooltip 
                           cursor={{ strokeDasharray: '3 3' }}
-                          formatter={(value: number, name: string) => [
-                            name === 'return' ? `${value.toFixed(2)}%` : value.toFixed(1),
-                            name === 'return' ? 'Predicted Return' : 'Risk Level'
+                          formatter={(value: number | undefined, name: string | undefined) => [
+                            (name === 'return') ? `${(value || 0).toFixed(2)}%` : (value || 0).toFixed(1),
+                            (name === 'return') ? 'Predicted Return' : 'Risk Level'
                           ]}
                         />
                         <Scatter 
@@ -335,7 +335,7 @@ export default function RecommendPage() {
                               tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
                             />
                             <Tooltip 
-                              formatter={(value: number) => formatCurrency(value)}
+                              formatter={(value: number | undefined) => formatCurrency(value || 0)}
                               labelFormatter={(label) => `Year ${label}`}
                             />
                             <Legend />

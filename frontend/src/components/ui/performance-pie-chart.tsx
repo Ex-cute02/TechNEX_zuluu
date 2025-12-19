@@ -134,7 +134,7 @@ export default function PerformancePieChart({ data, theme = 'dark' }: Performanc
                 <ChartTooltipContent 
                   nameKey="funds" 
                   hideLabel 
-                  formatter={(value, name, props) => [
+                  formatter={(value: any, name: any, props: any) => [
                     `${value} funds (${props.payload.percentage}%)`,
                     chartConfig[name as keyof typeof chartConfig]?.label || name
                   ]}
@@ -156,7 +156,7 @@ export default function PerformancePieChart({ data, theme = 'dark' }: Performanc
                 stroke="none"
                 fontSize={12}
                 fontWeight={600}
-                formatter={(value: number) => value > 0 ? value.toString() : ''}
+                formatter={(value: any) => (typeof value === 'number' && value > 0) ? value.toString() : ''}
               />
             </Pie>
           </PieChart>
@@ -168,7 +168,7 @@ export default function PerformancePieChart({ data, theme = 'dark' }: Performanc
             <div key={item.category} className="flex items-center gap-2">
               <div 
                 className="w-3 h-3 rounded-sm" 
-                style={{ backgroundColor: chartConfig[item.category as keyof typeof chartConfig]?.color || '#fbbf24' }}
+                style={{ backgroundColor: item.fill }}
               />
               <span className={`font-mono uppercase tracking-wider ${
                 theme === 'light' ? 'text-gray-600' : 'text-slate-400'

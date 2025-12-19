@@ -21,7 +21,7 @@ export default function WhatIfPage() {
     // Load available funds
     const loadFunds = async () => {
       try {
-        const response = await api.getFunds({ limit: 100 });
+        const response = await api.getFunds({ limit: 100 }) as any;
         if (response.funds) {
           setAvailableFunds(response.funds.map((f: any) => ({
             scheme_name: f.scheme_name,
@@ -338,7 +338,7 @@ export default function WhatIfPage() {
                       border: theme === 'light' ? '1px solid #e5e7eb' : '1px solid #1e293b',
                       color: theme === 'light' ? '#374151' : '#fbbf24'
                     }}
-                    formatter={(value: number) => formatCurrency(value)}
+                    formatter={(value: number | undefined) => formatCurrency(value || 0)}
                   />
                   <Legend />
                   <Bar dataKey="investNow" fill="#10B981" name="Invest Now" />

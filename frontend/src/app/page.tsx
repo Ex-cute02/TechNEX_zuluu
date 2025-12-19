@@ -166,7 +166,7 @@ export default function Home() {
   );
 }
 
-function FeatureCard({ href, icon, title, desc, accent }) {
+function FeatureCard({ href, icon, title, desc, accent }: { href: string; icon: React.ReactNode; title: string; desc: string; accent: string }) {
   return (
     <Link href={href} className="group">
       <div className="h-full bg-white/60 border border-white p-8 rounded-[2.5rem] hover:bg-white hover:shadow-2xl hover:shadow-amber-900/5 transition-all duration-500 transform hover:-translate-y-2">
@@ -180,7 +180,7 @@ function FeatureCard({ href, icon, title, desc, accent }) {
   );
 }
 
-function BenefitItem({ title, desc }) {
+function BenefitItem({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="flex items-start gap-5 group">
       <div className="mt-1 bg-white shadow-sm border border-amber-100 p-2 rounded-xl group-hover:bg-amber-50 transition-colors">

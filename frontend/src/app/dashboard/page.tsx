@@ -176,8 +176,8 @@ export default function DashboardPage() {
                 { period: '5Y', return: dashboardData?.market_overview.avg_5yr_return },
               ]}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme === 'light' ? '#e5e7eb' : '#1e293b'} vertical={false} />
-                <XAxis dataKey="period" stroke={theme === 'light' ? '#6b7280' : '#475569'} fontSize={10} fontBold fontMono />
-                <YAxis stroke={theme === 'light' ? '#6b7280' : '#475569'} fontSize={10} fontMono />
+                <XAxis dataKey="period" stroke={theme === 'light' ? '#6b7280' : '#475569'} fontSize={10} />
+                <YAxis stroke={theme === 'light' ? '#6b7280' : '#475569'} fontSize={10} />
                 <Tooltip contentStyle={{ 
                   backgroundColor: theme === 'light' ? '#ffffff' : '#020617', 
                   border: theme === 'light' ? '1px solid #e5e7eb' : '1px solid #1e293b', 
